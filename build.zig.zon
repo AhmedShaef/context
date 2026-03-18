@@ -1,0 +1,16 @@
+.{
+    .name = .context,
+    .version = "0.1.0",
+    .fingerprint = 0xe25d857e37fcf16f,
+    .minimum_zig_version = "0.16.0-dev.0",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "examples",
+        "tests",
+        "README.md",
+        "docs",
+    },
+}

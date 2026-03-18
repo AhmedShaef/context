@@ -1,0 +1,18 @@
+# Zig build artifacts
+zig-cache/
+.zig-cache/
+zig-out/
+
+# Build system cache
+build/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Ignore docs contents
+docs/*
+
+.zig-global-cache/
