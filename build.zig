@@ -36,6 +36,8 @@ pub fn build(b: *std.Build) void {
     const test_files = [_][]const u8{
         "tests/context_smoke_test.zig",
         "tests/context_import_test.zig",
+        "tests/context_root_test.zig",
+        "tests/context_copy_test.zig",
     };
     for (test_files) |test_file| {
         const test_module = b.createModule(.{
