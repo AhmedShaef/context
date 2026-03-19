@@ -50,6 +50,9 @@ pub fn build(b: *std.Build) void {
         "tests/context_deadline_test.zig",
         "tests/context_deadline_inheritance_test.zig",
         "tests/context_timeout_test.zig",
+        "tests/context_cancel_test.zig",
+        "tests/context_cancel_propagation_test.zig",
+        "tests/context_cancel_source_test.zig",
     };
     for (test_files) |test_file| {
         const test_module = b.createModule(.{

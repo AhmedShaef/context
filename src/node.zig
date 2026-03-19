@@ -2,6 +2,7 @@
 
 const key = @import("key.zig");
 const deadline_mod = @import("deadline.zig");
+const cancel_mod = @import("cancel.zig");
 
 /// Operation represented by this derivation node.
 pub const NodeKind = enum {
@@ -9,18 +10,20 @@ pub const NodeKind = enum {
     attach,
     mask,
     deadline,
+    cancel,
 };
 
 /// A node is a single immutable derivation layer.
 ///
 /// Each node references its parent and may carry one operation payload
-/// (attach/mask/deadline) for deterministic child-to-parent traversal.
+/// (attach/mask/deadline/cancel) for deterministic child-to-parent traversal.
 pub const Node = struct {
     parent: ?*const Node = null,
     kind: NodeKind = .derive,
     key_marker: ?*const fn () void = null,
     value_ptr: ?*const anyopaque = null,
     deadline: ?deadline_mod.Deadline = null,
+    cancel_state: ?*const cancel_mod.CancelState = null,
 
     pub fn initDerived(parent: ?*const Node) Node {
         return .{
@@ -29,6 +32,7 @@ pub const Node = struct {
             .key_marker = null,
             .value_ptr = null,
             .deadline = null,
+            .cancel_state = null,
         };
     }
 
@@ -41,6 +45,7 @@ pub const Node = struct {
             .key_marker = keyMarker(KeyType),
             .value_ptr = @ptrCast(value_ptr),
             .deadline = null,
+            .cancel_state = null,
         };
     }
 
@@ -53,6 +58,7 @@ pub const Node = struct {
             .key_marker = keyMarker(KeyType),
             .value_ptr = null,
             .deadline = null,
+            .cancel_state = null,
         };
     }
 
@@ -63,6 +69,18 @@ pub const Node = struct {
             .key_marker = null,
             .value_ptr = null,
             .deadline = deadline,
+            .cancel_state = null,
+        };
+    }
+
+    pub fn initCancel(parent: ?*const Node, state: *const cancel_mod.CancelState) Node {
+        return .{
+            .parent = parent,
+            .kind = .cancel,
+            .key_marker = null,
+            .value_ptr = null,
+            .deadline = null,
+            .cancel_state = state,
         };
     }
 
