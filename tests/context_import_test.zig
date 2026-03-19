@@ -8,7 +8,7 @@ test "root module exports compile" {
     _ = context.Node{};
     _ = context.Lookup{};
     _ = context.Mask{};
-    _ = context.Deadline{};
+    _ = context.Deadline.init(0);
     _ = context.CancelSource{};
     _ = context.CancelToken{};
     _ = context.ClonePlan{};

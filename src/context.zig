@@ -6,6 +6,7 @@ const attach_mod = @import("attach.zig");
 const node_mod = @import("node.zig");
 const lookup_mod = @import("lookup.zig");
 const mask_mod = @import("mask.zig");
+const deadline_mod = @import("deadline.zig");
 
 const RootKind = enum(u2) {
     empty,
@@ -17,20 +18,12 @@ pub const Context = struct {
     node: ?*const node_mod.Node = null,
     root: RootKind = .empty,
 
-    /// Returns the empty root context.
     pub fn empty() Context {
-        return .{
-            .node = null,
-            .root = .empty,
-        };
+        return .{ .node = null, .root = .empty };
     }
 
-    /// Returns the background root context.
     pub fn background() Context {
-        return .{
-            .node = null,
-            .root = .background,
-        };
+        return .{ .node = null, .root = .background };
     }
 
     pub fn isEmpty(self: Context) bool {
@@ -53,9 +46,34 @@ pub const Context = struct {
         return mask_mod.withoutValue(self, KeyType, allocator);
     }
 
+    /// Attaches a deadline node using narrowing semantics.
+    pub fn withDeadline(self: Context, requested: deadline_mod.Deadline, allocator: std.mem.Allocator) std.mem.Allocator.Error!Context {
+        const effective = deadline_mod.narrow(self.deadline(), requested);
+
+        const child_node = try allocator.create(node_mod.Node);
+        child_node.* = node_mod.Node.initDeadline(self.node, effective);
+
+        return Context.fromRaw(child_node, self.root);
+    }
+
+    /// Computes deadline from a monotonic base and duration, then narrows.
+    pub fn withTimeout(self: Context, duration_nanos: u64, now_nanos: u64, allocator: std.mem.Allocator) (std.mem.Allocator.Error || deadline_mod.TimeoutError)!Context {
+        const requested = try deadline_mod.fromTimeout(now_nanos, duration_nanos);
+        return self.withDeadline(requested, allocator);
+    }
+
     /// M05 typed retrieval: deterministic child-to-parent lookup with mask stop.
     pub fn get(self: Context, comptime KeyType: type) ?KeyType.Value {
         return lookup_mod.get(KeyType, self.node);
+    }
+
+    /// Effective deadline lookup across ancestry.
+    pub fn deadline(self: Context) ?deadline_mod.Deadline {
+        var cursor = self.node;
+        while (cursor) |n| : (cursor = n.parent) {
+            if (n.kind == .deadline) return n.deadline;
+        }
+        return null;
     }
 
     pub fn parent(self: Context) ?Context {
@@ -73,9 +91,6 @@ pub const Context = struct {
     }
 
     pub fn fromRaw(node: ?*const node_mod.Node, root: RootKind) Context {
-        return .{
-            .node = node,
-            .root = root,
-        };
+        return .{ .node = node, .root = root };
     }
 };

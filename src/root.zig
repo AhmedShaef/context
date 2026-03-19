@@ -9,13 +9,14 @@ pub const derive = @import("derive.zig");
 pub const attach = @import("attach.zig");
 pub const lookup = @import("lookup.zig");
 pub const mask = @import("mask.zig");
+pub const deadline = @import("deadline.zig");
 
 pub const Context = @import("context.zig").Context;
 pub const Key = key.Key;
 pub const Node = @import("node.zig").Node;
 pub const Lookup = lookup.Lookup;
 pub const Mask = mask.Mask;
-pub const Deadline = @import("deadline.zig").Deadline;
+pub const Deadline = deadline.Deadline;
 pub const CancelSource = @import("cancel.zig").CancelSource;
 pub const CancelToken = @import("cancel.zig").CancelToken;
 pub const ClonePlan = @import("clone.zig").ClonePlan;
@@ -28,7 +29,7 @@ test {
     _ = Node{};
     _ = Lookup{};
     _ = Mask{};
-    _ = Deadline{};
+    _ = Deadline.init(0);
     _ = CancelSource{};
     _ = CancelToken{};
     _ = ClonePlan{};

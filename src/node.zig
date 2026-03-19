@@ -1,23 +1,26 @@
 //! Context node representation for one derivation step.
 
 const key = @import("key.zig");
+const deadline_mod = @import("deadline.zig");
 
 /// Operation represented by this derivation node.
 pub const NodeKind = enum {
     derive,
     attach,
     mask,
+    deadline,
 };
 
 /// A node is a single immutable derivation layer.
 ///
-/// Each node references its parent and may carry either an attach binding or a
-/// mask marker for a typed key.
+/// Each node references its parent and may carry one operation payload
+/// (attach/mask/deadline) for deterministic child-to-parent traversal.
 pub const Node = struct {
     parent: ?*const Node = null,
     kind: NodeKind = .derive,
     key_marker: ?*const fn () void = null,
     value_ptr: ?*const anyopaque = null,
+    deadline: ?deadline_mod.Deadline = null,
 
     pub fn initDerived(parent: ?*const Node) Node {
         return .{
@@ -25,6 +28,7 @@ pub const Node = struct {
             .kind = .derive,
             .key_marker = null,
             .value_ptr = null,
+            .deadline = null,
         };
     }
 
@@ -36,6 +40,7 @@ pub const Node = struct {
             .kind = .attach,
             .key_marker = keyMarker(KeyType),
             .value_ptr = @ptrCast(value_ptr),
+            .deadline = null,
         };
     }
 
@@ -47,6 +52,17 @@ pub const Node = struct {
             .kind = .mask,
             .key_marker = keyMarker(KeyType),
             .value_ptr = null,
+            .deadline = null,
+        };
+    }
+
+    pub fn initDeadline(parent: ?*const Node, deadline: deadline_mod.Deadline) Node {
+        return .{
+            .parent = parent,
+            .kind = .deadline,
+            .key_marker = null,
+            .value_ptr = null,
+            .deadline = deadline,
         };
     }
 
