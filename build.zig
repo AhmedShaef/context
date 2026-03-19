@@ -44,6 +44,9 @@ pub fn build(b: *std.Build) void {
         "tests/context_derivation_test.zig",
         "tests/context_shadowing_test.zig",
         "tests/context_lineage_test.zig",
+        "tests/context_lookup_test.zig",
+        "tests/context_masking_test.zig",
+        "tests/context_shadow_lookup_test.zig",
     };
     for (test_files) |test_file| {
         const test_module = b.createModule(.{

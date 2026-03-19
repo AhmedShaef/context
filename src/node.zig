@@ -2,18 +2,27 @@
 
 const key = @import("key.zig");
 
+/// Operation represented by this derivation node.
+pub const NodeKind = enum {
+    derive,
+    attach,
+    mask,
+};
+
 /// A node is a single immutable derivation layer.
 ///
-/// Each node optionally carries one typed key/value binding and a pointer to its
-/// parent node, which forms deterministic parent-child lineage.
+/// Each node references its parent and may carry either an attach binding or a
+/// mask marker for a typed key.
 pub const Node = struct {
     parent: ?*const Node = null,
+    kind: NodeKind = .derive,
     key_marker: ?*const fn () void = null,
     value_ptr: ?*const anyopaque = null,
 
     pub fn initDerived(parent: ?*const Node) Node {
         return .{
             .parent = parent,
+            .kind = .derive,
             .key_marker = null,
             .value_ptr = null,
         };
@@ -24,34 +33,43 @@ pub const Node = struct {
 
         return .{
             .parent = parent,
+            .kind = .attach,
             .key_marker = keyMarker(KeyType),
             .value_ptr = @ptrCast(value_ptr),
         };
     }
 
+    pub fn initMask(comptime KeyType: type, parent: ?*const Node) Node {
+        key.require(KeyType);
+
+        return .{
+            .parent = parent,
+            .kind = .mask,
+            .key_marker = keyMarker(KeyType),
+            .value_ptr = null,
+        };
+    }
+
     pub fn hasBinding(self: *const Node) bool {
-        return self.key_marker != null and self.value_ptr != null;
+        return self.kind == .attach and self.key_marker != null and self.value_ptr != null;
     }
 
     pub fn matchesKey(self: *const Node, comptime KeyType: type) bool {
         key.require(KeyType);
-
         return self.key_marker != null and self.key_marker.? == keyMarker(KeyType);
     }
 
-    /// Returns the value only when this node's immediate binding matches `KeyType`.
-    /// M04 intentionally does not traverse parent lineage for lookup.
     pub fn getImmediate(self: *const Node, comptime KeyType: type) ?KeyType.Value {
+        if (self.kind != .attach) return null;
         if (!self.matchesKey(KeyType)) return null;
-        const ptr = self.value_ptr orelse return null;
 
+        const ptr = self.value_ptr orelse return null;
         const typed_ptr: *const KeyType.Value = @ptrCast(@alignCast(ptr));
         return typed_ptr.*;
     }
 
     fn keyMarker(comptime KeyType: type) *const fn () void {
         key.require(KeyType);
-
         return struct {
             fn marker() void {}
         }.marker;

@@ -7,12 +7,14 @@ pub const value_binding = @import("value_binding.zig");
 pub const value_contracts = @import("value_contracts.zig");
 pub const derive = @import("derive.zig");
 pub const attach = @import("attach.zig");
+pub const lookup = @import("lookup.zig");
+pub const mask = @import("mask.zig");
 
 pub const Context = @import("context.zig").Context;
 pub const Key = key.Key;
 pub const Node = @import("node.zig").Node;
-pub const Lookup = @import("lookup.zig").Lookup;
-pub const Mask = @import("mask.zig").Mask;
+pub const Lookup = lookup.Lookup;
+pub const Mask = mask.Mask;
 pub const Deadline = @import("deadline.zig").Deadline;
 pub const CancelSource = @import("cancel.zig").CancelSource;
 pub const CancelToken = @import("cancel.zig").CancelToken;

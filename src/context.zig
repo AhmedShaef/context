@@ -4,6 +4,8 @@ const std = @import("std");
 const derive_mod = @import("derive.zig");
 const attach_mod = @import("attach.zig");
 const node_mod = @import("node.zig");
+const lookup_mod = @import("lookup.zig");
+const mask_mod = @import("mask.zig");
 
 const RootKind = enum(u2) {
     empty,
@@ -31,39 +33,36 @@ pub const Context = struct {
         };
     }
 
-    /// Indicates whether this context is the empty root.
     pub fn isEmpty(self: Context) bool {
         return self.node == null and self.root == .empty;
     }
 
-    /// Indicates whether this context is the background root.
     pub fn isBackground(self: Context) bool {
         return self.node == null and self.root == .background;
     }
 
-    /// Creates a child context node with no value binding.
     pub fn derive(self: Context, allocator: std.mem.Allocator) std.mem.Allocator.Error!Context {
         return derive_mod.derive(self, allocator);
     }
 
-    /// Attaches a typed key/value by deriving a new context node.
     pub fn withValue(self: Context, comptime KeyType: type, value: KeyType.Value, allocator: std.mem.Allocator) attach_mod.AttachContextError!Context {
         return attach_mod.withValue(self, KeyType, value, allocator);
     }
 
-    /// Immediate-node retrieval only; parent traversal is intentionally deferred.
-    pub fn get(self: Context, comptime KeyType: type) ?KeyType.Value {
-        const n = self.node orelse return null;
-        return n.getImmediate(KeyType);
+    pub fn withoutValue(self: Context, comptime KeyType: type, allocator: std.mem.Allocator) mask_mod.MaskError!Context {
+        return mask_mod.withoutValue(self, KeyType, allocator);
     }
 
-    /// Returns the immediate parent context, if this context has a node.
+    /// M05 typed retrieval: deterministic child-to-parent lookup with mask stop.
+    pub fn get(self: Context, comptime KeyType: type) ?KeyType.Value {
+        return lookup_mod.get(KeyType, self.node);
+    }
+
     pub fn parent(self: Context) ?Context {
         const n = self.node orelse return null;
         return Context.fromRaw(n.parent, self.root);
     }
 
-    /// Returns true when the current node carries an attached value.
     pub fn hasImmediateBinding(self: Context) bool {
         const n = self.node orelse return false;
         return n.hasBinding();
