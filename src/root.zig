@@ -5,6 +5,8 @@ pub const errors = @import("errors.zig");
 pub const key = @import("key.zig");
 pub const value_binding = @import("value_binding.zig");
 pub const value_contracts = @import("value_contracts.zig");
+pub const derive = @import("derive.zig");
+pub const attach = @import("attach.zig");
 
 pub const Context = @import("context.zig").Context;
 pub const Key = key.Key;

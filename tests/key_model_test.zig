@@ -6,20 +6,20 @@ const RequestID = struct {
 };
 
 test "valid key works with typed contract surface" {
-    const allocator = std.testing.allocator;
+    const allocator = std.heap.page_allocator;
     var ctx = context.Context.empty();
 
     ctx = try ctx.withValue(RequestID, @as(u128, 42), allocator);
 
     const result: ?RequestID.Value = ctx.get(RequestID);
-    try std.testing.expect(result == null);
+    try std.testing.expectEqual(@as(RequestID.Value, 42), result.?);
 }
 
 test "payload type is Key.Value at API boundary" {
-    const allocator = std.testing.allocator;
+    const allocator = std.heap.page_allocator;
     var ctx = context.Context.background();
 
     ctx = try ctx.withValue(RequestID, @as(RequestID.Value, 7), allocator);
     const typed: ?RequestID.Value = ctx.get(RequestID);
-    _ = typed;
+    try std.testing.expectEqual(@as(RequestID.Value, 7), typed.?);
 }
