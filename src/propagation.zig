@@ -16,6 +16,10 @@ pub fn effectiveValue(comptime KeyType: type, start: ?*const node_mod.Node) ?Key
 
     var cursor = start;
     while (cursor) |n| : (cursor = n.parent) {
+        if (n.kind == .flatten) {
+            return n.getImmediate(KeyType);
+        }
+
         if (!n.matchesKey(KeyType)) continue;
 
         if (n.kind == .mask) return null;
@@ -29,10 +33,9 @@ pub fn effectiveDeadline(start: ?*const node_mod.Node) ?deadline_mod.Deadline {
     var effective: ?deadline_mod.Deadline = null;
 
     while (cursor) |n| : (cursor = n.parent) {
-        if (n.kind != .deadline) continue;
-        const d = n.deadline orelse continue;
-
-        effective = if (effective) |current| deadline_mod.Deadline.min(current, d) else d;
+        if (n.deadline) |d| {
+            effective = if (effective) |current| deadline_mod.Deadline.min(current, d) else d;
+        }
     }
     return effective;
 }
@@ -40,7 +43,6 @@ pub fn effectiveDeadline(start: ?*const node_mod.Node) ?deadline_mod.Deadline {
 pub fn effectiveCancellation(start: ?*const node_mod.Node) bool {
     var cursor = start;
     while (cursor) |n| : (cursor = n.parent) {
-        if (n.kind != .cancel) continue;
         const state = n.cancel_state orelse continue;
         if (state.isCancelled()) return true;
     }
@@ -54,8 +56,6 @@ pub fn effectiveState(start: ?*const node_mod.Node) EffectiveState {
     };
 }
 
-/// Optional mixed-state helper that validates lifetime-policy assumptions used
-/// for cross-domain reasoning before returning effective state.
 pub fn effectiveStateWithLifetimeValidation(start: ?*const node_mod.Node, parent_domain: allocator_domain.AllocatorDomain, child_domain: allocator_domain.AllocatorDomain, cancel_domain: allocator_domain.AllocatorDomain) lifetime_validation.ValidationError!EffectiveState {
     try lifetime_validation.validateDeterministic(parent_domain, child_domain, cancel_domain);
     return effectiveState(start);

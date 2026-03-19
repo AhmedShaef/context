@@ -16,6 +16,9 @@ pub const propagation_validation = @import("propagation_validation.zig");
 pub const allocator_domain = @import("allocator_domain.zig");
 pub const lifetime = @import("lifetime.zig");
 pub const lifetime_validation = @import("lifetime_validation.zig");
+pub const migration_policy = @import("migration_policy.zig");
+pub const flatten = @import("flatten.zig");
+pub const clone = @import("clone.zig");
 
 pub const Context = @import("context.zig").Context;
 pub const Key = key.Key;
@@ -25,7 +28,7 @@ pub const Mask = mask.Mask;
 pub const Deadline = deadline.Deadline;
 pub const CancelSource = cancel.CancelSource;
 pub const CancelToken = cancel.CancelToken;
-pub const ClonePlan = @import("clone.zig").ClonePlan;
+pub const ClonePlan = clone.ClonePlan;
 pub const DebugHooks = @import("debug.zig").DebugHooks;
 pub const TestingSupport = @import("testing.zig").TestingSupport;
 
@@ -40,6 +43,7 @@ test {
     _ = CancelToken{};
     _ = propagation.EffectiveState{ .deadline = null, .cancelled = false };
     _ = allocator_domain.AllocatorDomain.root_owned;
+    _ = migration_policy.defaultPolicy();
     _ = ClonePlan{};
     _ = DebugHooks{};
     _ = TestingSupport{};

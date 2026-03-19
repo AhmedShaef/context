@@ -8,6 +8,9 @@ const lookup_mod = @import("lookup.zig");
 const mask_mod = @import("mask.zig");
 const deadline_mod = @import("deadline.zig");
 const cancel_mod = @import("cancel.zig");
+const clone_mod = @import("clone.zig");
+const flatten_mod = @import("flatten.zig");
+const migration_policy_mod = @import("migration_policy.zig");
 const propagation_mod = @import("propagation.zig");
 const propagation_validation_mod = @import("propagation_validation.zig");
 const allocator_domain_mod = @import("allocator_domain.zig");
@@ -85,6 +88,16 @@ pub const Context = struct {
         };
     }
 
+    /// Cross-allocator migration: flatten lineage into one self-contained node.
+    pub fn cloneInto(self: Context, allocator: std.mem.Allocator) flatten_mod.FlattenError!Context {
+        const flattened = try flatten_mod.flattenIntoNode(self.node, allocator, migration_policy_mod.defaultPolicy());
+
+        const cloned_node = try allocator.create(node_mod.Node);
+        cloned_node.* = flattened;
+
+        return Context.fromRaw(cloned_node, self.root);
+    }
+
     pub fn cancelToken(self: Context) cancel_mod.CancelToken {
         return .{ .state = self.cancelState() };
     }
@@ -109,7 +122,6 @@ pub const Context = struct {
         return propagation_validation_mod.validateDeterministic(KeyType, self.node);
     }
 
-    /// M09 policy helpers for allocator-domain and lifetime invariants.
     pub fn validateSharedLineage(parent_domain: allocator_domain_mod.AllocatorDomain, child_domain: allocator_domain_mod.AllocatorDomain) lifetime_validation_mod.ValidationError!void {
         return lifetime_validation_mod.validateSharedLineage(parent_domain, child_domain);
     }
@@ -125,6 +137,11 @@ pub const Context = struct {
     pub fn parent(self: Context) ?Context {
         const n = self.node orelse return null;
         return Context.fromRaw(n.parent, self.root);
+    }
+
+    pub fn hasParentLineage(self: Context) bool {
+        const n = self.node orelse return false;
+        return n.parent != null;
     }
 
     pub fn hasImmediateBinding(self: Context) bool {
@@ -143,8 +160,11 @@ pub const Context = struct {
     fn cancelState(self: Context) ?*const cancel_mod.CancelState {
         var cursor = self.node;
         while (cursor) |n| : (cursor = n.parent) {
-            if (n.kind == .cancel) return n.cancel_state;
+            if (n.cancel_state) |state| return state;
         }
         return null;
     }
 };
+
+pub const ClonePlan = clone_mod.ClonePlan;
+

@@ -1,8 +1,17 @@
 //! Context node representation for one derivation step.
 
+const std = @import("std");
 const key = @import("key.zig");
 const deadline_mod = @import("deadline.zig");
 const cancel_mod = @import("cancel.zig");
+
+pub const CloneValueFn = *const fn (allocator: std.mem.Allocator, src: *const anyopaque) std.mem.Allocator.Error!*const anyopaque;
+
+pub const FlatValue = struct {
+    key_id: *const anyopaque,
+    value_ptr: *const anyopaque,
+    clone_fn: CloneValueFn,
+};
 
 pub const NodeKind = enum {
     derive,
@@ -10,17 +19,16 @@ pub const NodeKind = enum {
     mask,
     deadline,
     cancel,
+    flatten,
 };
 
-/// A node is a single immutable derivation layer.
-///
-/// Each node references its parent and may carry one operation payload
-/// (attach/mask/deadline/cancel) for deterministic child-to-parent traversal.
 pub const Node = struct {
     parent: ?*const Node = null,
     kind: NodeKind = .derive,
     key_id: ?*const anyopaque = null,
     value_ptr: ?*const anyopaque = null,
+    value_clone_fn: ?CloneValueFn = null,
+    flat_values: ?[]const FlatValue = null,
     deadline: ?deadline_mod.Deadline = null,
     cancel_state: ?*const cancel_mod.CancelState = null,
 
@@ -30,6 +38,8 @@ pub const Node = struct {
             .kind = .derive,
             .key_id = null,
             .value_ptr = null,
+            .value_clone_fn = null,
+            .flat_values = null,
             .deadline = null,
             .cancel_state = null,
         };
@@ -43,6 +53,8 @@ pub const Node = struct {
             .kind = .attach,
             .key_id = keyId(KeyType),
             .value_ptr = @ptrCast(value_ptr),
+            .value_clone_fn = cloneFn(KeyType),
+            .flat_values = null,
             .deadline = null,
             .cancel_state = null,
         };
@@ -56,6 +68,8 @@ pub const Node = struct {
             .kind = .mask,
             .key_id = keyId(KeyType),
             .value_ptr = null,
+            .value_clone_fn = null,
+            .flat_values = null,
             .deadline = null,
             .cancel_state = null,
         };
@@ -67,6 +81,8 @@ pub const Node = struct {
             .kind = .deadline,
             .key_id = null,
             .value_ptr = null,
+            .value_clone_fn = null,
+            .flat_values = null,
             .deadline = deadline,
             .cancel_state = null,
         };
@@ -78,13 +94,32 @@ pub const Node = struct {
             .kind = .cancel,
             .key_id = null,
             .value_ptr = null,
+            .value_clone_fn = null,
+            .flat_values = null,
             .deadline = null,
             .cancel_state = state,
         };
     }
 
+    pub fn initFlatten(values: []const FlatValue, deadline: ?deadline_mod.Deadline, cancel_state: ?*const cancel_mod.CancelState) Node {
+        return .{
+            .parent = null,
+            .kind = .flatten,
+            .key_id = null,
+            .value_ptr = null,
+            .value_clone_fn = null,
+            .flat_values = values,
+            .deadline = deadline,
+            .cancel_state = cancel_state,
+        };
+    }
+
     pub fn hasBinding(self: *const Node) bool {
-        return self.kind == .attach and self.key_id != null and self.value_ptr != null;
+        return switch (self.kind) {
+            .attach => self.key_id != null and self.value_ptr != null,
+            .flatten => self.flat_values != null and self.flat_values.?.len > 0,
+            else => false,
+        };
     }
 
     pub fn matchesKey(self: *const Node, comptime KeyType: type) bool {
@@ -93,20 +128,49 @@ pub const Node = struct {
     }
 
     pub fn getImmediate(self: *const Node, comptime KeyType: type) ?KeyType.Value {
-        if (self.kind != .attach) return null;
-        if (!self.matchesKey(KeyType)) return null;
-
-        const ptr = self.value_ptr orelse return null;
-        const typed_ptr: *const KeyType.Value = @ptrCast(@alignCast(ptr));
-        return typed_ptr.*;
+        return switch (self.kind) {
+            .attach => blk: {
+                if (!self.matchesKey(KeyType)) break :blk null;
+                const ptr = self.value_ptr orelse break :blk null;
+                const typed_ptr: *const KeyType.Value = @ptrCast(@alignCast(ptr));
+                break :blk typed_ptr.*;
+            },
+            .flatten => blk: {
+                const values = self.flat_values orelse break :blk null;
+                const wanted = keyId(KeyType);
+                for (values) |entry| {
+                    if (entry.key_id != wanted) continue;
+                    const typed_ptr: *const KeyType.Value = @ptrCast(@alignCast(entry.value_ptr));
+                    break :blk typed_ptr.*;
+                }
+                break :blk null;
+            },
+            else => null,
+        };
     }
 
-    /// Per-key static address token used as internal key identity.
+    pub fn flattenEntryCount(self: *const Node) usize {
+        const values = self.flat_values orelse return 0;
+        return values.len;
+    }
+
     fn keyId(comptime KeyType: type) *const anyopaque {
         key.require(KeyType);
         return &struct {
             const Key = KeyType;
             var id_token: u8 = 0;
         }.id_token;
+    }
+
+    fn cloneFn(comptime KeyType: type) CloneValueFn {
+        key.require(KeyType);
+        return struct {
+            fn cloneValue(allocator: std.mem.Allocator, src: *const anyopaque) std.mem.Allocator.Error!*const anyopaque {
+                const typed_src: *const KeyType.Value = @ptrCast(@alignCast(src));
+                const out = try allocator.create(KeyType.Value);
+                out.* = typed_src.*;
+                return @ptrCast(out);
+            }
+        }.cloneValue;
     }
 };

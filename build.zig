@@ -61,6 +61,11 @@ pub fn build(b: *std.Build) void {
         "tests/context_allocator_domain_test.zig",
         "tests/context_cross_domain_policy_test.zig",
         "tests/context_cancel_lifetime_test.zig",
+        "tests/context_clone_basic_test.zig",
+        "tests/context_clone_values_test.zig",
+        "tests/context_clone_deadline_test.zig",
+        "tests/context_clone_cancel_test.zig",
+        "tests/context_clone_flatten_test.zig",
     };
     for (test_files) |test_file| {
         const test_module = b.createModule(.{
