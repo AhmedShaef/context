@@ -4,7 +4,6 @@ const key = @import("key.zig");
 const deadline_mod = @import("deadline.zig");
 const cancel_mod = @import("cancel.zig");
 
-/// Operation represented by this derivation node.
 pub const NodeKind = enum {
     derive,
     attach,
@@ -20,7 +19,7 @@ pub const NodeKind = enum {
 pub const Node = struct {
     parent: ?*const Node = null,
     kind: NodeKind = .derive,
-    key_marker: ?*const fn () void = null,
+    key_id: ?*const anyopaque = null,
     value_ptr: ?*const anyopaque = null,
     deadline: ?deadline_mod.Deadline = null,
     cancel_state: ?*const cancel_mod.CancelState = null,
@@ -29,7 +28,7 @@ pub const Node = struct {
         return .{
             .parent = parent,
             .kind = .derive,
-            .key_marker = null,
+            .key_id = null,
             .value_ptr = null,
             .deadline = null,
             .cancel_state = null,
@@ -42,7 +41,7 @@ pub const Node = struct {
         return .{
             .parent = parent,
             .kind = .attach,
-            .key_marker = keyMarker(KeyType),
+            .key_id = keyId(KeyType),
             .value_ptr = @ptrCast(value_ptr),
             .deadline = null,
             .cancel_state = null,
@@ -55,7 +54,7 @@ pub const Node = struct {
         return .{
             .parent = parent,
             .kind = .mask,
-            .key_marker = keyMarker(KeyType),
+            .key_id = keyId(KeyType),
             .value_ptr = null,
             .deadline = null,
             .cancel_state = null,
@@ -66,7 +65,7 @@ pub const Node = struct {
         return .{
             .parent = parent,
             .kind = .deadline,
-            .key_marker = null,
+            .key_id = null,
             .value_ptr = null,
             .deadline = deadline,
             .cancel_state = null,
@@ -77,7 +76,7 @@ pub const Node = struct {
         return .{
             .parent = parent,
             .kind = .cancel,
-            .key_marker = null,
+            .key_id = null,
             .value_ptr = null,
             .deadline = null,
             .cancel_state = state,
@@ -85,12 +84,12 @@ pub const Node = struct {
     }
 
     pub fn hasBinding(self: *const Node) bool {
-        return self.kind == .attach and self.key_marker != null and self.value_ptr != null;
+        return self.kind == .attach and self.key_id != null and self.value_ptr != null;
     }
 
     pub fn matchesKey(self: *const Node, comptime KeyType: type) bool {
         key.require(KeyType);
-        return self.key_marker != null and self.key_marker.? == keyMarker(KeyType);
+        return self.key_id != null and self.key_id.? == keyId(KeyType);
     }
 
     pub fn getImmediate(self: *const Node, comptime KeyType: type) ?KeyType.Value {
@@ -102,10 +101,12 @@ pub const Node = struct {
         return typed_ptr.*;
     }
 
-    fn keyMarker(comptime KeyType: type) *const fn () void {
+    /// Per-key static address token used as internal key identity.
+    fn keyId(comptime KeyType: type) *const anyopaque {
         key.require(KeyType);
-        return struct {
-            fn marker() void {}
-        }.marker;
+        return &struct {
+            const Key = KeyType;
+            var id_token: u8 = 0;
+        }.id_token;
     }
 };

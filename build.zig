@@ -53,6 +53,10 @@ pub fn build(b: *std.Build) void {
         "tests/context_cancel_test.zig",
         "tests/context_cancel_propagation_test.zig",
         "tests/context_cancel_source_test.zig",
+        "tests/context_propagation_values_test.zig",
+        "tests/context_propagation_deadline_test.zig",
+        "tests/context_propagation_cancel_test.zig",
+        "tests/context_propagation_mixed_test.zig",
     };
     for (test_files) |test_file| {
         const test_module = b.createModule(.{

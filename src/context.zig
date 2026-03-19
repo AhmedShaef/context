@@ -8,13 +8,14 @@ const lookup_mod = @import("lookup.zig");
 const mask_mod = @import("mask.zig");
 const deadline_mod = @import("deadline.zig");
 const cancel_mod = @import("cancel.zig");
+const propagation_mod = @import("propagation.zig");
+const propagation_validation_mod = @import("propagation_validation.zig");
 
 const RootKind = enum(u2) {
     empty,
     background,
 };
 
-/// `Context` is a value type; copying this struct copies handle state deterministically.
 pub const Context = struct {
     node: ?*const node_mod.Node = null,
     root: RootKind = .empty,
@@ -66,7 +67,6 @@ pub const Context = struct {
         return self.withDeadline(requested, allocator);
     }
 
-    /// Derives a context with a new child cancellation state and source.
     pub fn withCancel(self: Context, allocator: std.mem.Allocator) std.mem.Allocator.Error!WithCancelResult {
         const parent_state = self.cancelState();
 
@@ -86,9 +86,8 @@ pub const Context = struct {
         return .{ .state = self.cancelState() };
     }
 
-    /// Polling-based cancellation observation.
     pub fn isCancelled(self: Context) bool {
-        return self.cancelToken().isCancelled();
+        return propagation_mod.effectiveCancellation(self.node);
     }
 
     pub fn get(self: Context, comptime KeyType: type) ?KeyType.Value {
@@ -96,11 +95,16 @@ pub const Context = struct {
     }
 
     pub fn deadline(self: Context) ?deadline_mod.Deadline {
-        var cursor = self.node;
-        while (cursor) |n| : (cursor = n.parent) {
-            if (n.kind == .deadline) return n.deadline;
-        }
-        return null;
+        return propagation_mod.effectiveDeadline(self.node);
+    }
+
+    /// Unified effective-state helper for mixed propagation composition.
+    pub fn effectiveState(self: Context) propagation_mod.EffectiveState {
+        return propagation_mod.effectiveState(self.node);
+    }
+
+    pub fn validatePropagation(self: Context, comptime KeyType: type) propagation_validation_mod.ValidationError!void {
+        return propagation_validation_mod.validateDeterministic(KeyType, self.node);
     }
 
     pub fn parent(self: Context) ?Context {

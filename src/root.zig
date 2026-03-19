@@ -11,6 +11,8 @@ pub const lookup = @import("lookup.zig");
 pub const mask = @import("mask.zig");
 pub const deadline = @import("deadline.zig");
 pub const cancel = @import("cancel.zig");
+pub const propagation = @import("propagation.zig");
+pub const propagation_validation = @import("propagation_validation.zig");
 
 pub const Context = @import("context.zig").Context;
 pub const Key = key.Key;
@@ -33,6 +35,7 @@ test {
     _ = Deadline.init(0);
     _ = CancelSource{};
     _ = CancelToken{};
+    _ = propagation.EffectiveState{ .deadline = null, .cancelled = false };
     _ = ClonePlan{};
     _ = DebugHooks{};
     _ = TestingSupport{};
