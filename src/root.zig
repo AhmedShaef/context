@@ -2,9 +2,12 @@
 
 pub const constants = @import("constants.zig");
 pub const errors = @import("errors.zig");
+pub const key = @import("key.zig");
+pub const value_binding = @import("value_binding.zig");
+pub const value_contracts = @import("value_contracts.zig");
 
 pub const Context = @import("context.zig").Context;
-pub const Key = @import("key.zig").Key;
+pub const Key = key.Key;
 pub const Node = @import("node.zig").Node;
 pub const Lookup = @import("lookup.zig").Lookup;
 pub const Mask = @import("mask.zig").Mask;

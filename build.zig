@@ -38,6 +38,9 @@ pub fn build(b: *std.Build) void {
         "tests/context_import_test.zig",
         "tests/context_root_test.zig",
         "tests/context_copy_test.zig",
+        "tests/key_model_test.zig",
+        "tests/value_contracts_test.zig",
+        "tests/key_validation_test.zig",
     };
     for (test_files) |test_file| {
         const test_module = b.createModule(.{
