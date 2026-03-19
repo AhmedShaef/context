@@ -1,6 +1,8 @@
 //! Cancellation state, source, and token.
 
 const std = @import("std");
+const allocator_domain = @import("allocator_domain.zig");
+const lifetime = @import("lifetime.zig");
 
 /// Shared cancellation state with optional parent linkage.
 ///
@@ -26,9 +28,13 @@ pub const CancelState = struct {
         }
         return false;
     }
+
+    /// Lifetime policy check for borrowing this cancel state across domains.
+    pub fn validateBorrowAcrossDomains(lineage_domain: allocator_domain.AllocatorDomain, cancel_domain: allocator_domain.AllocatorDomain) lifetime.LifetimeError!void {
+        try lifetime.validateCancelBorrow(lineage_domain, cancel_domain);
+    }
 };
 
-/// Write-capable cancellation owner.
 pub const CancelSource = struct {
     state: ?*CancelState = null,
 
@@ -36,7 +42,6 @@ pub const CancelSource = struct {
         return .{ .state = self.state };
     }
 
-    /// Idempotent cancel signal.
     pub fn cancel(self: CancelSource) void {
         const s = self.state orelse return;
         s.cancelled.store(true, .release);
@@ -47,7 +52,6 @@ pub const CancelSource = struct {
     }
 };
 
-/// Read-only cancellation observer.
 pub const CancelToken = struct {
     state: ?*const CancelState = null,
 

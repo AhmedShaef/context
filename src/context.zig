@@ -10,6 +10,9 @@ const deadline_mod = @import("deadline.zig");
 const cancel_mod = @import("cancel.zig");
 const propagation_mod = @import("propagation.zig");
 const propagation_validation_mod = @import("propagation_validation.zig");
+const allocator_domain_mod = @import("allocator_domain.zig");
+const lifetime_mod = @import("lifetime.zig");
+const lifetime_validation_mod = @import("lifetime_validation.zig");
 
 const RootKind = enum(u2) {
     empty,
@@ -98,13 +101,25 @@ pub const Context = struct {
         return propagation_mod.effectiveDeadline(self.node);
     }
 
-    /// Unified effective-state helper for mixed propagation composition.
     pub fn effectiveState(self: Context) propagation_mod.EffectiveState {
         return propagation_mod.effectiveState(self.node);
     }
 
     pub fn validatePropagation(self: Context, comptime KeyType: type) propagation_validation_mod.ValidationError!void {
         return propagation_validation_mod.validateDeterministic(KeyType, self.node);
+    }
+
+    /// M09 policy helpers for allocator-domain and lifetime invariants.
+    pub fn validateSharedLineage(parent_domain: allocator_domain_mod.AllocatorDomain, child_domain: allocator_domain_mod.AllocatorDomain) lifetime_validation_mod.ValidationError!void {
+        return lifetime_validation_mod.validateSharedLineage(parent_domain, child_domain);
+    }
+
+    pub fn validateCancelBorrow(lineage_domain: allocator_domain_mod.AllocatorDomain, cancel_domain: allocator_domain_mod.AllocatorDomain) lifetime_validation_mod.ValidationError!void {
+        return lifetime_validation_mod.validateCancelBorrow(lineage_domain, cancel_domain);
+    }
+
+    pub fn requiresCloneForDomainTransition(from: allocator_domain_mod.AllocatorDomain, to: allocator_domain_mod.AllocatorDomain) bool {
+        return lifetime_mod.requiresCloneForDomainTransition(from, to);
     }
 
     pub fn parent(self: Context) ?Context {
